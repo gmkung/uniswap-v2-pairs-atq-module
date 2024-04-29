@@ -5,19 +5,21 @@ const SUBGRAPH_URLS: Record<string, { decentralized: string }> = {
   // Ethereum Mainnet
   "1": {
     decentralized:
-      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmYayB5NBkDuGmgJNz1B9kH3ySYfA1iLBz8X8Jv8qcobSQ",
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmTZ8ejXJxRo7vDBS4uwqBeGoxLSWbhaA7oXa1RvxunLy7",
   },
 };
 
 interface PoolToken {
-  symbol: string;
+  id: string;
   name: string;
+  symbol: string;
 }
 
 interface Pool {
-  address: string;
-  createTime: number;
-  tokens: PoolToken[];
+  id: string;
+  createdAtTimestamp: number;
+  token0: PoolToken;
+  token1: PoolToken;
 }
 
 interface GraphQLData {
@@ -35,21 +37,27 @@ const headers: Record<string, string> = {
 };
 
 const GET_POOLS_QUERY = `
-  query GetPools($lastTimestamp: Int) {
-    pools(
-      first: 1000,
-      orderBy: createTime,
-      orderDirection: asc,
-      where: { createTime_gt: $lastTimestamp }
-    ) {
-      address
-      createTime
-      tokens {
-        symbol
-        name  
-      }
+query GetPools($lastTimestamp: Int) {
+  pools(
+    first: 1000,
+    orderBy: createdAtTimestamp,
+    orderDirection: asc,
+    where: { createdAtTimestamp_gt: $lastTimestamp }
+  ) {
+    id
+    createdAtTimestamp
+    token0 {
+      id
+      name
+      symbol
+    }
+    token1 {
+      id
+      name
+      symbol
     }
   }
+}
 `;
 
 function isError(e: unknown): e is Error {
@@ -59,6 +67,15 @@ function isError(e: unknown): e is Error {
     "message" in e &&
     typeof (e as Error).message === "string"
   );
+}
+
+function containsHtmlOrMarkdown(text: string): boolean {
+  // Simple HTML tag detection
+  if (/<[^>]*>/.test(text)) {
+    return true;
+  }
+
+  return false;
 }
 
 async function fetchData(
@@ -113,19 +130,68 @@ function truncateString(text: string, maxLength: number) {
 }
 
 // Local helper function used by returnTags
+interface Token {
+  id: string;
+  name: string;
+  symbol: string;
+}
+
+interface Pool {
+  id: string;
+  createdAtTimestamp: number;
+  token0: Token;
+  token1: Token;
+}
+
 function transformPoolsToTags(chainId: string, pools: Pool[]): ContractTag[] {
-  return pools.map((pool) => {
+  // First, filter and log invalid entries
+  const validPools: Pool[] = [];
+  const rejectedNames: string[] = [];
+
+  pools.forEach((pool) => {
+    const token0Invalid =
+      containsHtmlOrMarkdown(pool.token0.name) ||
+      containsHtmlOrMarkdown(pool.token0.symbol);
+    const token1Invalid =
+      containsHtmlOrMarkdown(pool.token1.name) ||
+      containsHtmlOrMarkdown(pool.token1.symbol);
+
+    if (token0Invalid || token1Invalid) {
+      if (token0Invalid) {
+        rejectedNames.push(
+          pool.token0.name + ", Symbol: " + pool.token0.symbol
+        );
+      }
+      if (token1Invalid) {
+        rejectedNames.push(
+          pool.token1.name + ", Symbol: " + pool.token1.symbol
+        );
+      }
+    } else {
+      validPools.push(pool);
+    }
+  });
+
+  // Log all rejected names
+  if (rejectedNames.length > 0) {
+    console.log(
+      "Rejected token names due to HTML/Markdown content:",
+      rejectedNames
+    );
+  }
+
+  // Process valid pools into tags
+  return validPools.map((pool) => {
     const maxSymbolsLength = 45;
-    const symbolsText = pool.tokens.map((t) => t.symbol).join("/");
+    const symbolsText = `${pool.token0.symbol}/${pool.token1.symbol}`;
     const truncatedSymbolsText = truncateString(symbolsText, maxSymbolsLength);
+
     return {
-      "Contract Address": `eip155:${chainId}:${pool.address}`,
+      "Contract Address": `eip155:${chainId}:${pool.id}`,
       "Public Name Tag": `${truncatedSymbolsText} Pool`,
-      "Project Name": "Balancer v2",
-      "UI/Website Link": "https://balancer.fi",
-      "Public Note": `A Balancer v2 pool with the tokens: ${pool.tokens
-        .map((t) => t.name)
-        .join(", ")}.`,
+      "Project Name": "Uniswap v3",
+      "UI/Website Link": "https://uniswap.org",
+      "Public Note": `The liquidity pool contract on Uniswap v3 for the ${pool.token0.name} (${pool.token0.symbol}) / ${pool.token1.name} (${pool.token1.symbol}) pair.`,
     };
   });
 }
@@ -151,14 +217,14 @@ class TagService implements ITagService {
         isMore = pools.length === 1000;
         if (isMore) {
           lastTimestamp = parseInt(
-            pools[pools.length - 1].createTime.toString(),
+            pools[pools.length - 1].createdAtTimestamp.toString(),
             10
           );
         }
       } catch (error) {
         if (isError(error)) {
           console.error(`An error occurred: ${error.message}`);
-          throw new Error(`Failed fetching data: ${error.message}`); // Propagate a new error with more context
+          throw new Error(`Failed fetching data: ${error}`); // Propagate a new error with more context
         } else {
           console.error("An unknown error occurred.");
           throw new Error("An unknown error occurred during fetch operation."); // Throw with a generic error message if the error type is unknown
