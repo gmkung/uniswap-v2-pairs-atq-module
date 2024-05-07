@@ -7,6 +7,34 @@ const SUBGRAPH_URLS: Record<string, { decentralized: string }> = {
     decentralized:
       "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmZeCuoZeadgHkGwLwMeguyqUKz1WPWQYKcKyMCeQqGhsF", // Ethereum deployment, by Uniswap team
   },
+  "42161": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmZ5uwhnwsJXAQGYEF8qKPQ85iVhYAcVZcZAPfrF7ZNb9z", // Arbitrum One deployment, by the same address (0xddaa...0f7f) that deployed the Ethereum one
+  },
+  "137": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmdAaDAUDCypVB85eFUkQMkS5DE1HV4s7WJb6iSiygNvAw", // Polygon deployment, by the same address(0xddaa...0f7f) that deployed the Ethereum one
+  },
+  "10": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmbTaWMFk4baXnoKQodnyYsFVKFNEiLsgZAe6eu2Sdj8Ef",
+  }, // Optimism deployment, by the same address(0xddaa...0f7f)that deployed the Ethereum one
+  "8453": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmPWDTWRfS8XewMJhxXoQiZX6RkrUMYH7BFnnB846v6wzR",
+  }, // Base deployment, by the same address(0xddaa...0f7f) that deployed the Ethereum one
+  "56": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmUaxDRdZyD3XEmgt3sDRsc6C4tJQgDkKGx3EX5mfLKVHX",
+  }, // BSC deployment, by the same address(0xddaa...0f7f) that deployed the Ethereum one
+  "42220": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmXfJmxY7C4A4UoWEexvei8XzcSxMegr78rt3Rzz8szkZA",
+  }, // Celo deployment, by the same address(0xddaa...0f7f) that deployed the Ethereum one
+  "43114": {
+    decentralized:
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmYxTSFgy6bD2TDJxgC7d24UFbGkBRBX95eFnVcbiAgcXf",
+  }, // Avalance deployment, by the same address(0xddaa...0f7f) that deployed the Ethereum one
 };
 
 interface PoolToken {
