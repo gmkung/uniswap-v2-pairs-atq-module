@@ -5,37 +5,18 @@ const SUBGRAPH_URLS: Record<string, { decentralized: string }> = {
   // Ethereum Mainnet
   "1": {
     decentralized:
-      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmZeCuoZeadgHkGwLwMeguyqUKz1WPWQYKcKyMCeQqGhsF", // Ethereum deployment, by Uniswap team
+      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmZzsQGDmQFbzYkv2qx4pVnD6aVnuhKbD3t1ea7SAvV7zE", // Ethereum deployment, by Uniswap team
   },
-  "137": {
-    decentralized:
-      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmdAaDAUDCypVB85eFUkQMkS5DE1HV4s7WJb6iSiygNvAw", // Polygon deployment, same as the latest deployment ID as of 8-5-2024 on https://thegraph.com/hosted-service/subgraph/ianlapham/uniswap-v3-polygon, which is used on info.uniswap.org
-  },
-  "10": {
-    decentralized:
-      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmbTaWMFk4baXnoKQodnyYsFVKFNEiLsgZAe6eu2Sdj8Ef",
-  }, // Optimism deployment, same as the latest deployment ID as of 8-5-2024 on https://thegraph.com/hosted-service/subgraph/ianlapham/optimism-post-regenesis , which is used on info.uniswap.org
-  "42220": {
-    decentralized:
-      "https://gateway-arbitrum.network.thegraph.com/api/[api-key]/deployments/id/QmXfJmxY7C4A4UoWEexvei8XzcSxMegr78rt3Rzz8szkZA",
-  }, // Celo deployment, same as the latest deployment ID as of 8-5-2024 on https://thegraph.com/hosted-service/subgraph/jesse-sawa/uniswap-celo, which is used on info.uniswap.org
 };
-
-interface PoolToken {
-  id: string;
-  name: string;
-  symbol: string;
-}
-
-interface Pool {
+interface Pair {
   id: string;
   createdAtTimestamp: number;
-  token0: PoolToken;
-  token1: PoolToken;
+  token0: Token;
+  token1: Token;
 }
 
 interface GraphQLData {
-  pools: Pool[];
+  pairs: Pair[];
 }
 
 interface GraphQLResponse {
@@ -50,7 +31,7 @@ const headers: Record<string, string> = {
 
 const GET_POOLS_QUERY = `
 query GetPools($lastTimestamp: Int) {
-  pools(
+  pairs(
     first: 1000,
     orderBy: createdAtTimestamp,
     orderDirection: asc,
@@ -86,14 +67,13 @@ function containsHtmlOrMarkdown(text: string): boolean {
   if (/<[^>]*>/.test(text)) {
     return true;
   }
-
   return false;
 }
 
 async function fetchData(
   subgraphUrl: string,
   lastTimestamp: number
-): Promise<Pool[]> {
+): Promise<Pair[]> {
   const response = await fetch(subgraphUrl, {
     method: "POST",
     headers,
@@ -115,11 +95,11 @@ async function fetchData(
     throw new Error("GraphQL errors occurred: see logs for details.");
   }
 
-  if (!result.data || !result.data.pools) {
-    throw new Error("No pools data found.");
+  if (!result.data || !result.data.pairs) {
+    throw new Error("No pairs data found.");
   }
 
-  return result.data.pools;
+  return result.data.pairs;
 }
 
 function prepareUrl(chainId: string, apiKey: string): string {
@@ -148,39 +128,32 @@ interface Token {
   symbol: string;
 }
 
-interface Pool {
-  id: string;
-  createdAtTimestamp: number;
-  token0: Token;
-  token1: Token;
-}
-
-function transformPoolsToTags(chainId: string, pools: Pool[]): ContractTag[] {
+function transformPairsToTags(chainId: string, pairs: Pair[]): ContractTag[] {
   // First, filter and log invalid entries
-  const validPools: Pool[] = [];
+  const validPairs: Pair[] = [];
   const rejectedNames: string[] = [];
 
-  pools.forEach((pool) => {
+  pairs.forEach((pair) => {
     const token0Invalid =
-      containsHtmlOrMarkdown(pool.token0.name) ||
-      containsHtmlOrMarkdown(pool.token0.symbol);
+      containsHtmlOrMarkdown(pair.token0.name) ||
+      containsHtmlOrMarkdown(pair.token0.symbol);
     const token1Invalid =
-      containsHtmlOrMarkdown(pool.token1.name) ||
-      containsHtmlOrMarkdown(pool.token1.symbol);
+      containsHtmlOrMarkdown(pair.token1.name) ||
+      containsHtmlOrMarkdown(pair.token1.symbol);
 
     if (token0Invalid || token1Invalid) {
       if (token0Invalid) {
         rejectedNames.push(
-          pool.token0.name + ", Symbol: " + pool.token0.symbol
+          pair.token0.name + ", Symbol: " + pair.token0.symbol
         );
       }
       if (token1Invalid) {
         rejectedNames.push(
-          pool.token1.name + ", Symbol: " + pool.token1.symbol
+          pair.token1.name + ", Symbol: " + pair.token1.symbol
         );
       }
     } else {
-      validPools.push(pool);
+      validPairs.push(pair);
     }
   });
 
@@ -192,18 +165,18 @@ function transformPoolsToTags(chainId: string, pools: Pool[]): ContractTag[] {
     );
   }
 
-  // Process valid pools into tags
-  return validPools.map((pool) => {
+  // Process valid pair into tags
+  return validPairs.map((pair) => {
     const maxSymbolsLength = 45;
-    const symbolsText = `${pool.token0.symbol}/${pool.token1.symbol}`;
+    const symbolsText = `${pair.token0.symbol.trim()}/${pair.token1.symbol.trim()}`;
     const truncatedSymbolsText = truncateString(symbolsText, maxSymbolsLength);
 
     return {
-      "Contract Address": `eip155:${chainId}:${pool.id}`,
-      "Public Name Tag": `${truncatedSymbolsText} Pool`,
-      "Project Name": "Uniswap v3",
+      "Contract Address": `eip155:${chainId}:${pair.id}`,
+      "Public Name Tag": `${truncatedSymbolsText} Pair`,
+      "Project Name": "Uniswap v2",
       "UI/Website Link": "https://uniswap.org",
-      "Public Note": `The liquidity pool contract on Uniswap v3 for the ${pool.token0.name} (${pool.token0.symbol}) / ${pool.token1.name} (${pool.token1.symbol}) pair.`,
+      "Public Note": `The pair contract on Uniswap v2 for the ${pair.token0.name.trim()} (${pair.token0.symbol.trim()}) / ${pair.token1.name.trim()} (${pair.token1.symbol.trim()}) pair.`,
     };
   });
 }
@@ -218,18 +191,20 @@ class TagService implements ITagService {
     let lastTimestamp: number = 0;
     let allTags: ContractTag[] = [];
     let isMore = true;
-
+    let counter = 0;
     const url = prepareUrl(chainId, apiKey);
 
     while (isMore) {
       try {
-        const pools = await fetchData(url, lastTimestamp);
-        allTags.push(...transformPoolsToTags(chainId, pools));
+        const pairs = await fetchData(url, lastTimestamp);
+        allTags.push(...transformPairsToTags(chainId, pairs));
+        counter++;
+        console.log(`Retrieved first ${counter * 1000} entries...`);
 
-        isMore = pools.length === 1000;
+        isMore = pairs.length === 1000;
         if (isMore) {
           lastTimestamp = parseInt(
-            pools[pools.length - 1].createdAtTimestamp.toString(),
+            pairs[pairs.length - 1].createdAtTimestamp.toString(),
             10
           );
         }
