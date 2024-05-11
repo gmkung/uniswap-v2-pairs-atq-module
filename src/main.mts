@@ -35,7 +35,7 @@ query GetPools($lastTimestamp: Int) {
     first: 1000,
     orderBy: createdAtTimestamp,
     orderDirection: asc,
-    where: { createdAtTimestamp_gt: $lastTimestamp }
+    where: { createdAtTimestamp_gt: $lastTimestamp ,id:"0x099ae805d9cd45dddb83f7c7fea3e36a8d5b74aa" }
   ) {
     id
     createdAtTimestamp
@@ -176,7 +176,11 @@ function transformPairsToTags(chainId: string, pairs: Pair[]): ContractTag[] {
       "Public Name Tag": `${truncatedSymbolsText} Pair`,
       "Project Name": "Uniswap v2",
       "UI/Website Link": "https://uniswap.org",
-      "Public Note": `The pair contract on Uniswap v2 for the ${pair.token0.name.trim()} (${pair.token0.symbol.trim()}) / ${pair.token1.name.trim()} (${pair.token1.symbol.trim()}) pair.`,
+      "Public Note": `The pair contract on Uniswap v2 for the ${pair.token0.name
+        .replace("USD//C", "USDC")
+        .trim()} (${pair.token0.symbol.trim()}) / ${pair.token1.name
+        .replace("USD//C", "USDC")
+        .trim()} (${pair.token1.symbol.trim()}) pair.`,
     };
   });
 }
