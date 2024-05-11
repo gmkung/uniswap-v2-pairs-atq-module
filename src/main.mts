@@ -35,7 +35,7 @@ query GetPools($lastTimestamp: Int) {
     first: 1000,
     orderBy: createdAtTimestamp,
     orderDirection: asc,
-    where: { createdAtTimestamp_gt: $lastTimestamp ,id:"0x099ae805d9cd45dddb83f7c7fea3e36a8d5b74aa" }
+    where: { createdAtTimestamp_gt: $lastTimestamp }
   ) {
     id
     createdAtTimestamp
