@@ -13,7 +13,7 @@ To set up the submodule for development, follow these steps:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/gmkung/balancer-v2-pools-atq-module
+   git clone https://github.com/gmkung/[this repo].git
    ```
 2. Navigate into the repository directory:
 
